@@ -80,20 +80,22 @@ for i = 1:numel(methods)
         upper(method), results.acc * 100);
 
     % Save results and confusion matrix
+    resultsToSave = rmfield(results, 'fig');
     save(fullfile(resultsDir, ...
-        [method '_results.mat']), 'results');
+        [method '_results.mat']), 'resultsToSave');
 
-    exportgraphics(gcf, fullfile(resultsDir, ...
+    exportgraphics(results.fig, fullfile(resultsDir, ...
         [method '_confusion_matrix.png']));
 
     noiseResults = test_noise_robustness(model, testFiles, Ytest);
 
     % Save noise robustness results
+    noiseResultsToSave = rmfield(noiseResults, 'fig');
     save(fullfile(resultsDir, ...
-        [method '_noise_results.mat']), 'noiseResults');
+        [method '_noise_results.mat']), 'noiseResultsToSave');
 
     % Save accuracy vs SNR figure
-    exportgraphics(gcf, fullfile(resultsDir, ...
+    exportgraphics(noiseResults.fig, fullfile(resultsDir, ...
         [method '_noise_robustness.png']));
 end
 

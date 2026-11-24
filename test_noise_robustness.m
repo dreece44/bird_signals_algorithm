@@ -16,6 +16,10 @@ if numel(testFiles) ~= numel(Ytest)
     error('Test files and labels must have matching lengths.');
 end
 
+if isempty(testFiles)
+    error('No test recordings were provided.');
+end
+
 for s = 1:numel(snrLevels)
     snr = snrLevels(s);
     Xnoisy = [];
@@ -38,7 +42,7 @@ for s = 1:numel(snrLevels)
     end
 
     % Evaluate noisy recordings
-    results = evaluate_model(model, Xnoisy, Ytest);
+    results = evaluate_model(model, Xnoisy, Ytest, false);
     accuracies(s) = results.acc;
 
     fprintf('Accuracy at %d dB: %.2f%%\n', ...
@@ -46,7 +50,7 @@ for s = 1:numel(snrLevels)
 end
 
 % Plot accuracy against noise level
-figure;
+noiseResults.fig = figure;
 plot(snrLevels, accuracies * 100, '-o', 'LineWidth', 2);
 xlabel('Signal-to-Noise Ratio (dB)');
 ylabel('Classification Accuracy (%)');
