@@ -26,6 +26,7 @@ requiredFunctions = {
     'extract_features'
     'train_model'
     'evaluate_model'
+    'test_noise_robustness'
     };
 
 for i = 1:numel(requiredFunctions)
@@ -62,6 +63,8 @@ Ytrain = labels(trainIdx);
 Xtest = X(testIdx, :);
 Ytest = labels(testIdx);
 
+testFiles = files(testIdx);
+
 % Train and evaluate classifiers
 methods = {'svm', 'ensemble'};
 
@@ -82,6 +85,16 @@ for i = 1:numel(methods)
 
     exportgraphics(gcf, fullfile(resultsDir, ...
         [method '_confusion_matrix.png']));
+
+    noiseResults = test_noise_robustness(model, testFiles, Ytest);
+
+    % Save noise robustness results
+    save(fullfile(resultsDir, ...
+        [method '_noise_results.mat']), 'noiseResults');
+
+    % Save accuracy vs SNR figure
+    exportgraphics(gcf, fullfile(resultsDir, ...
+        [method '_noise_robustness.png']));
 end
 
 fprintf('Evaluation complete.\n');
