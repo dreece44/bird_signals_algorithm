@@ -63,7 +63,7 @@ y = frames(:, active);
 y = y(:);
 
 %if signal is too small, use the full filtered signal
-if lenth(y) < minSec*fs
+if length(y) < minSec*fs
     y=x;
 end
 
