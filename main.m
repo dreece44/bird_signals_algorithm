@@ -38,10 +38,11 @@ end
 
 % Load dataset
 fprintf('Loading bird recordings...\n');
-[files, labels] = load_dataset(dataDir);
+[files, labels, groups] = load_dataset(dataDir);
 
-% Split recordings before feature extraction
-[trainIdx, testIdx] = split_data(labels, 0.20, 42);
+% Split by recording before feature extraction, so clips from one
+% recording never appear in both the training and test sets
+[trainIdx, testIdx] = split_data(labels, 0.20, 42, groups);
 
 % Extract features for all recordings
 fprintf('Extracting audio features...\n');
