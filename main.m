@@ -40,7 +40,8 @@ end
 fprintf('Loading bird recordings...\n');
 [files, labels, groups] = load_dataset(dataDir);
 
-% Split by original recording to prevent data leakage
+% Split by recording before feature extraction, so clips from one
+% recording never appear in both the training and test sets
 [trainIdx, testIdx] = split_data(labels, 0.20, 42, groups);
 
 % Extract features for all recordings
