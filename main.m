@@ -36,12 +36,12 @@ for i = 1:numel(requiredFunctions)
     end
 end
 
-% Load dataset
+% Load dataset and recording groups
 fprintf('Loading bird recordings...\n');
-[files, labels] = load_dataset(dataDir);
+[files, labels, groups] = load_dataset(dataDir);
 
-% Split recordings before feature extraction
-[trainIdx, testIdx] = split_data(labels, 0.20, 42);
+% Split by original recording to prevent data leakage
+[trainIdx, testIdx] = split_data(labels, 0.20, 42, groups);
 
 % Extract features for all recordings
 fprintf('Extracting audio features...\n');
@@ -60,6 +60,9 @@ end
 Xtrain = X(trainIdx, :);
 Ytrain = labels(trainIdx);
 
+% Keep recording groups for cross-validation
+trainGroups = groups(trainIdx);
+
 Xtest = X(testIdx, :);
 Ytest = labels(testIdx);
 
@@ -73,7 +76,8 @@ for i = 1:numel(methods)
 
     fprintf('Training %s classifier...\n', method);
 
-    model = train_model(Xtrain, Ytrain, method);
+    
+    model = train_model(Xtrain, Ytrain, method, trainGroups);
     results = evaluate_model(model, Xtest, Ytest);
 
     fprintf('%s accuracy: %.2f%%\n', ...
