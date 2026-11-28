@@ -1,65 +1,70 @@
-
 function noiseResults = test_noise_robustness(model, testFiles, Ytest)
-% TEST_NOISE_ROBUSTNESS Evaluate classification under white noise.
-% Inputs:
-%   model     - Trained classifier with normalization statistics
-%   testFiles - Cell array of test recording paths
-%   Ytest     - True species labels
-%
-% Output:
-%   noiseResults - Structure containing SNR levels and accuracy
+% TEST_NOISE_ROBUSTNESS Evaluate accuracy under repeatable Gaussian noise.
+% Uses five independent noise trials per SNR, with the same random seed
+% for each classifier call so SVM and ensemble see identical noisy clips.
+% Outputs mean accuracies, per-trial accuracies, and standard deviations.
 
 snrLevels = [20, 10, 0];
-accuracies = zeros(size(snrLevels));
+numTrials = 5;
+trialAccuracies = zeros(numTrials, numel(snrLevels));
 
 if numel(testFiles) ~= numel(Ytest)
     error('Test files and labels must have matching lengths.');
 end
-
 if isempty(testFiles)
     error('No test recordings were provided.');
 end
 
-for s = 1:numel(snrLevels)
-    snr = snrLevels(s);
-    Xnoisy = [];
+% Keep this function from changing the caller's random-number state.
+previousRng = rng;
+restoreRng = onCleanup(@() rng(previousRng)); %#ok<NASGU>
+rng(2026, 'twister');
 
-    fprintf('Testing at %d dB SNR...\n', snr);
+for trial = 1:numTrials
+    for s = 1:numel(snrLevels)
+        snrDb = snrLevels(s);
+        Xnoisy = [];
 
-    for i = 1:numel(testFiles)
-        % Load original test recording
-        [audio, fs] = audioread(testFiles{i});
+        fprintf('Noise trial %d/%d at %d dB SNR...\n', ...
+            trial, numTrials, snrDb);
 
-        % Add white Gaussian noise at the target SNR
-        noisyAudio = awgn(audio, snr, 'measured');
+        for i = 1:numel(testFiles)
+            [audio, fs] = audioread(testFiles{i});
+            noisyAudio = awgn(audio, snrDb, 'measured');
+            [processed, fsOut] = preprocess_audio(noisyAudio, fs);
+            features = extract_features(processed, fsOut);
+            Xnoisy(i, :) = features;
+        end
 
-        % Apply the same preprocessing as training
-        [processed, fsOut] = preprocess_audio(noisyAudio, fs);
-
-        % Extract features
-        features = extract_features(processed, fsOut);
-        Xnoisy(i, :) = features;
+        evaluation = evaluate_model(model, Xnoisy, Ytest, false);
+        trialAccuracies(trial, s) = evaluation.acc;
     end
-
-    % Evaluate noisy recordings
-    results = evaluate_model(model, Xnoisy, Ytest, false);
-    accuracies(s) = results.acc;
-
-    fprintf('Accuracy at %d dB: %.2f%%\n', ...
-        snr, results.acc * 100);
 end
 
-% Plot accuracy against noise level
+accuracies = mean(trialAccuracies, 1);
+stdAccuracies = std(trialAccuracies, 0, 1);
+
+for s = 1:numel(snrLevels)
+    fprintf('%d dB: mean %.2f%%, SD %.2f percentage points (%d trials)\n', ...
+        snrLevels(s), accuracies(s)*100, stdAccuracies(s)*100, numTrials);
+end
+
+% Display SNR from low to high.
+[sortedSnr, order] = sort(snrLevels);
 noiseResults.fig = figure;
-plot(snrLevels, accuracies * 100, '-o', 'LineWidth', 2);
+errorbar(sortedSnr, accuracies(order)*100, ...
+    stdAccuracies(order)*100, '-o', 'LineWidth', 2);
 xlabel('Signal-to-Noise Ratio (dB)');
-ylabel('Classification Accuracy (%)');
-title('Bird Species Classification Under Noise');
+ylabel('Mean Classification Accuracy (%)');
+title(sprintf('Bird Species Classification Under Noise (%d Trials)', numTrials));
 grid on;
 ylim([0 100]);
-xticks(sort(snrLevels));
-
+xticks(sortedSnr);
 
 noiseResults.snrLevels = snrLevels;
 noiseResults.accuracies = accuracies;
+noiseResults.stdAccuracies = stdAccuracies;
+noiseResults.trialAccuracies = trialAccuracies;
+noiseResults.numTrials = numTrials;
+noiseResults.seed = 2026;
 end
