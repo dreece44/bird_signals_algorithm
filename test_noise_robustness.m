@@ -57,7 +57,8 @@ ylabel('Classification Accuracy (%)');
 title('Bird Species Classification Under Noise');
 grid on;
 ylim([0 100]);
-xticks(snrLevels);
+xticks(sort(snrLevels));
+
 
 noiseResults.snrLevels = snrLevels;
 noiseResults.accuracies = accuracies;
