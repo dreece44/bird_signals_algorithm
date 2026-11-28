@@ -157,4 +157,14 @@ model.sigma = sigma;
 model.classNames = categories(Ytrain);
 model.cvLoss = cvLoss;
 
+% SVM scores are not probabilities. A second, posterior-fitted copy is
+% used only for predict_species' confidence score; model.clf (which makes
+% every prediction) is left unchanged, since FitPosterior also changes
+% how fitcecoc picks the class.
+model.scoreClf = [];
+if lower(string(method)) == "svm"
+    model.scoreClf = fitcecoc(Xnorm, Ytrain, ...
+        'Learners', svmTemplate, 'FitPosterior', true);
+end
+
 end
